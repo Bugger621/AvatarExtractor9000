@@ -35,4 +35,6 @@ async def on_message(message):
   
     await bot.process_commands(message)
 
-bot.run("MTM4ODI2MTgwNTY0NTYyNzQ0Mg.G444pA.qurBZIaP64unHG94lNqMK21Ls_nblW5CGZMu5Q")
+
+import os
+bot.run(os.getenv("TOKEN"))
