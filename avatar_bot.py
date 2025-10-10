@@ -40,13 +40,16 @@ async def avatar(ctx, member: discord.Member = None):
     await ctx.send(member.avatar.url)
 
 @bot.event
+@bot.event
 async def on_message(message):
     global auto_reply_enabled
 
     if message.author == bot.user:
         return
 
-    if auto_reply_enabled and message.reference:
+    print(f"Received message: {message.content}")
+
+    if auto_reply_enabled and message.reference and message.content.lower().strip() == "avatar":
         try:
             ref_msg = await message.channel.fetch_message(message.reference.message_id)
             user = ref_msg.author
@@ -57,6 +60,12 @@ async def on_message(message):
     await bot.process_commands(message)
 
 keep_alive()
-TOKEN = os.getenv("DISCORD_TOKEN")  
-bot.run(TOKEN)
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+
+if not TOKEN:
+    print("⚠️ No token found. Make sure DISCORD_TOKEN is set in your environment!")
+else:
+    print("✅ Starting bot...")
+    bot.run(TOKEN)
 
