@@ -40,7 +40,6 @@ async def avatar(ctx, member: discord.Member = None):
     await ctx.send(member.avatar.url)
 
 @bot.event
-@bot.event
 async def on_message(message):
     global auto_reply_enabled
 
@@ -68,4 +67,5 @@ if not TOKEN:
 else:
     print("✅ Starting bot...")
     bot.run(TOKEN)
+
 
