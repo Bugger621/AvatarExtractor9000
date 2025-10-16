@@ -1,23 +1,21 @@
 import discord
-from discord.ext import commands
+import os
 from flask import Flask
 from threading import Thread
-import os
 
-# --- Flask keep-alive server ---
-app = Flask('')
+# --- Flask keep-alive server for UptimeRobot ---
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Avatar Bot is running!"
+    return "Bot is running!"
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
-    t = Thread(target=run)
+    t = Thread(target=run_flask)
     t.start()
-
 
 # --- Discord bot setup ---
 intents = discord.Intents.default()
@@ -26,80 +24,44 @@ intents.messages = True
 intents.guilds = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = discord.Client(intents=intents)
 
-auto_reply_enabled = False
-
-
-# --- On ready event ---
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user}")
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
-
-# --- Command: toggle auto reply ---
-@bot.command()
-async def toggle(ctx):
-    """Toggles the automatic avatar reply feature."""
-    global auto_reply_enabled
-    auto_reply_enabled = not auto_reply_enabled
-    status = "enabled ✅" if auto_reply_enabled else "disabled ❌"
-    await ctx.send(f"Avatar auto-reply has been {status}.")
-
-
-# --- Command: manual avatar lookup ---
-@bot.command()
-async def avatar(ctx, member: discord.Member = None):
-    """Manually get a user's avatar."""
-    member = member or ctx.author
-    avatar_url = member.avatar.url if member.avatar else member.default_avatar.url
-    embed = discord.Embed(title=f"{member.display_name}'s Avatar", color=discord.Color.blue())
-    embed.set_image(url=avatar_url)
-    await ctx.send(embed=embed)
-
-
-# --- Auto reply on message ---
 @bot.event
 async def on_message(message):
     # Ignore bot's own messages
     if message.author == bot.user:
         return
 
-    # Debug log
-    print(f"[DEBUG] Message from {message.author}: {message.content} | Ref: {message.reference}")
-
-    # Only reply if message is replying to someone and contains "avatar"
-    if message.reference and "avatar" in message.content.lower():
+    # Check if it's a reply with "avatar"
+    if message.reference and message.content.lower().strip() == "avatar":
         try:
-            ref = message.reference
+            replied_message = await message.channel.fetch_message(message.reference.message_id)
+            target_user = replied_message.author
 
-            # Try to get the original message that was replied to
-            if ref.resolved:
-                replied_user = ref.resolved.author
-            else:
-                replied_msg = await message.channel.fetch_message(ref.message_id)
-                replied_user = replied_msg.author
+            embed = discord.Embed(
+                title=f"{target_user.name}'s Avatar",
+                color=discord.Color.blue()
+            )
+            embed.set_image(url=target_user.avatar.url if target_user.avatar else target_user.default_avatar.url)
 
-            # Get avatar
-            avatar_url = replied_user.avatar.url if replied_user.avatar else replied_user.default_avatar.url
-
-            # Send embed with avatar
-            embed = discord.Embed(title=f"{replied_user.display_name}'s Avatar", color=discord.Color.blue())
-            embed.set_image(url=avatar_url)
-            await message.channel.send(embed=embed)
-
-            print(f"[DEBUG] Sent avatar for {replied_user.display_name}")
-
+            await message.reply(embed=embed)
         except Exception as e:
-            print(f"⚠️ Error fetching avatar: {e}")
+            print(f"⚠️ Error fetching replied message: {e}")
 
-    await bot.process_commands(message)
+# --- Run everything ---
+if __name__ == "__main__":
+    keep_alive()  # Start Flask server for uptime pings
 
-
-# --- Start bot ---
-keep_alive()
-TOKEN = os.getenv("DISCORD_TOKEN")
-bot.run(TOKEN)
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    if not TOKEN:
+        print("❌ ERROR: DISCORD_TOKEN environment variable not found!")
+    else:
+        print("🚀 Starting Discord bot...")
+        bot.run(TOKEN)
 
 
 
